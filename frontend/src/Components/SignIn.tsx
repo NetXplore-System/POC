@@ -43,17 +43,6 @@ function SignIn({ setUser }: ISignIn) {
                         <div className="card-body">
                             <form onSubmit={handleSignIn}>
                                 <div className="mb-3">
-                                    <label htmlFor="password" className="form-label">Password</label>
-                                    <input
-                                        type="password"
-                                        className="form-control"
-                                        id="password"
-                                        value={credentials.password}
-                                        onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="mb-3">
                                     <label htmlFor="email" className="form-label">Email</label>
                                     <input
                                         type="email"
@@ -61,6 +50,17 @@ function SignIn({ setUser }: ISignIn) {
                                         id="email"
                                         value={credentials.email}
                                         onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label htmlFor="password" className="form-label">Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        id="password"
+                                        value={credentials.password}
+                                        onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                                         required
                                     />
                                 </div>
