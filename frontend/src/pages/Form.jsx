@@ -25,6 +25,8 @@ const UploadWhatsAppFile = () => {
   const [filter, setFilter] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState("");
   const [messageLimit, setMessageLimit] = useState(50); // Default message limit
 
   const handleFileChange = (event) => {
@@ -101,7 +103,9 @@ const UploadWhatsAppFile = () => {
 
     const params = new URLSearchParams();
     if (startDate) params.append("start_date", startDate);
+    if (startTime) params.append("start_time", startTime); // הוספת שעה
     if (endDate) params.append("end_date", endDate);
+    if (endTime) params.append("end_time", endTime); // הוספת שעה
     if (messageLimit) params.append("limit", messageLimit);
 
     url += `?${params.toString()}`;
@@ -128,15 +132,15 @@ const UploadWhatsAppFile = () => {
       setMessage("Please fill in all required fields.");
       return;
     }
-  
+
     const formData = {
       name,
       description,
       start_date: startDate,
-    end_date: endDate,
-    message_limit: messageLimit,
+      end_date: endDate,
+      message_limit: messageLimit,
     };
-  
+
     fetch("http://localhost:8001/save-form", {
       method: "POST",
       headers: {
@@ -152,9 +156,6 @@ const UploadWhatsAppFile = () => {
       })
       .catch(() => setMessage("An error occurred while saving the form."));
   };
-  
-
-
 
   const filteredNodes = networkData
     ? networkData.nodes.filter((node) =>
@@ -215,7 +216,6 @@ const UploadWhatsAppFile = () => {
         <Button type="submit">Upload</Button>
 
         <Button onClick={handleSaveToDB}>Save to Database</Button>
-
       </StyledForm>
 
       {uploadedFile && (
@@ -233,11 +233,21 @@ const UploadWhatsAppFile = () => {
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
+            <Input
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+            />
             <Label>End Date:</Label>
             <Input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+            />
+            <Input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
             />
             <Button onClick={handleNetworkAnalysis}>
               Show Network Analysis
@@ -275,8 +285,6 @@ const UploadWhatsAppFile = () => {
                 linkWidth={(link) => link.weight || 1}
                 linkColor={() => "gray"}
               /> */}
-
-
 
               <GraphContainer>
                 <ForceGraph2D
@@ -335,7 +343,6 @@ const UploadWhatsAppFile = () => {
         </div>
       )}
     </FormContainer>
-    
   );
 };
 

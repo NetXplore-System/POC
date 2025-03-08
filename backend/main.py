@@ -341,7 +341,34 @@ async def analyze_network(
         print("Error:", e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
-# save reaserch to mongo db
+# # save reaserch to mongo db
+# @app.post("/save-form")
+# async def save_form(data: dict):
+#     """
+#     Save form data into the Research_user collection in MongoDB.
+#     """
+#     try:
+#         # הגדרת הקולקציה מתוך מסד הנתונים
+#         research_collection = db["Research_user"]
+        
+#         # מבנה הנתונים שיוכנס למסד
+#         form_data = {
+#             "name": data.get("name"),
+#             "description": data.get("description"),
+#             "start_date": data.get("start_date"),
+#             "end_date": data.get("end_date"),
+#             "message_limit": data.get("message_limit"),
+#             "created_at": datetime.utcnow(),
+#         }
+        
+#         # שמירת הנתונים למסד
+#         result = await research_collection.insert_one(form_data)
+        
+#         # החזרת תשובה למשתמש
+#         return {"message": "Form saved successfully", "id": str(result.inserted_id)}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error saving form: {str(e)}")
+
 @app.post("/save-form")
 async def save_form(data: dict):
     """
@@ -351,12 +378,28 @@ async def save_form(data: dict):
         # הגדרת הקולקציה מתוך מסד הנתונים
         research_collection = db["Research_user"]
         
+        # קבלת תאריך ושעה
+        start_date = data.get("start_date")
+        start_time = data.get("start_time")
+        end_date = data.get("end_date")
+        end_time = data.get("end_time")
+
+        # המרת תאריך ושעה לפורמט datetime אם קיימים
+        start_datetime = None
+        end_datetime = None
+
+        if start_date and start_time:
+            start_datetime = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M")
+
+        if end_date and end_time:
+            end_datetime = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M")
+
         # מבנה הנתונים שיוכנס למסד
         form_data = {
             "name": data.get("name"),
             "description": data.get("description"),
-            "start_date": data.get("start_date"),
-            "end_date": data.get("end_date"),
+            "start_datetime": start_datetime,  # שדה חדש לתאריך ושעה
+            "end_datetime": end_datetime,      # שדה חדש לתאריך ושעה
             "message_limit": data.get("message_limit"),
             "created_at": datetime.utcnow(),
         }
