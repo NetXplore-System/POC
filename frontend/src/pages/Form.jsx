@@ -98,19 +98,68 @@ const UploadWhatsAppFile = () => {
   //     .catch(() => setMessage("An error occurred during analysis."));
   // };
 
+  // const formatTime = (time) => {
+  //   //  If time is in HH:MM format, add ":00" for seconds
+  //   return time && time.length === 5 ? `${time}:00` : time; 
+  // };
+
+  // const handleNetworkAnalysis = () => {
+  //   let url = `http://localhost:8001/analyze/network/${uploadedFile}`;
+
+  //   const params = new URLSearchParams();
+  //   if (startDate) params.append("start_date", startDate);
+  //   if (startTime) params.append("start_time", startTime); // הוספת שעה
+  //   if (endDate) params.append("end_date", endDate);
+  //   if (endTime) params.append("end_time", endTime); // הוספת שעה
+  //   if (messageLimit) params.append("limit", messageLimit);
+
+  //   console.log("Requesting network analysis with:", {
+  //     startDate,
+  //     startTime,
+  //     endDate,
+  //     endTime,
+  //     messageLimit,
+  //     uploadedFile
+  //   });
+    
+
+  //   url += `?${params.toString()}`;
+  //   console.log("Request URL:", url);
+
+  //   fetch(url)
+  //     .then((response) => response.json())
+  //     .then((data) => {
+  //       console.log("Data returned from server:", data);
+  //       if (data.nodes && data.links) {
+  //         setNetworkData(data);
+  //       } else {
+  //         setMessage("No data returned from server.");
+  //       }
+  //     })
+  //     .catch((err) => {
+  //       setMessage("An error occurred during network analysis.");
+  //       console.error("Error during network analysis:", err);
+  //     });
+  // };
+
+
+  const formatTime = (time) => {
+    return time && time.length === 5 ? `${time}:00` : time; // If "HH:MM", add ":00"
+  };
+  
   const handleNetworkAnalysis = () => {
     let url = `http://localhost:8001/analyze/network/${uploadedFile}`;
-
+  
     const params = new URLSearchParams();
     if (startDate) params.append("start_date", startDate);
-    if (startTime) params.append("start_time", startTime); // הוספת שעה
+    if (startTime) params.append("start_time", formatTime(startTime)); // ✅ Ensure HH:MM:SS
     if (endDate) params.append("end_date", endDate);
-    if (endTime) params.append("end_time", endTime); // הוספת שעה
+    if (endTime) params.append("end_time", formatTime(endTime)); // ✅ Ensure HH:MM:SS
     if (messageLimit) params.append("limit", messageLimit);
-
+  
     url += `?${params.toString()}`;
     console.log("Request URL:", url);
-
+  
     fetch(url)
       .then((response) => response.json())
       .then((data) => {
@@ -126,6 +175,8 @@ const UploadWhatsAppFile = () => {
         console.error("Error during network analysis:", err);
       });
   };
+  
+
 
   const handleSaveToDB = () => {
     if (!name || !description) {

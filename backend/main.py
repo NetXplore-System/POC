@@ -252,94 +252,245 @@ async def delete_file(filename: str):
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
+# @app.get("/analyze/network/{filename}")
+# async def analyze_network(
+#     filename: str,
+#     start_date: str = Query(None),
+#     end_date: str = Query(None),
+#     limit: int = Query(None)  # פרמטר להגבלת מספר ההודעות
+# ):
+#     try:
+#         # בדיקה אם הקובץ קיים
+#         file_path = os.path.join(UPLOAD_FOLDER, filename)
+#         if not os.path.exists(file_path):
+#             return JSONResponse(content={"error": f"File '{filename}' not found."}, status_code=404)
+
+#         # אובייקטים לאחסון צמתים ומונה הקשרים
+#         nodes = set()
+#         edges_counter = defaultdict(int)  # מונה הקשרים בין שולחים
+#         previous_sender = None
+
+#         # המרת טווח תאריכים אם הוזנו
+#         start = datetime.strptime(start_date, "%Y-%m-%d") if start_date else None
+#         end = datetime.strptime(end_date, "%Y-%m-%d") if end_date else None
+
+#         print(f"Analyzing file: {file_path} with range {start} to {end}")
+
+#         count = 0  # מונה הודעות
+#         # קריאת הקובץ
+#         with open(file_path, "r", encoding="utf-8") as f:
+#             for line in f:
+#                 try:
+#                     # עצירת הלולאה אם הגענו למגבלת הודעות
+#                     if limit and count >= limit:
+#                         break
+
+#                     # דילוג על הודעות "הושמטה"
+#                     if "הושמטה" in line or "הושמט" in line:
+#                         continue
+
+#                     # בדיקה שהשורה בפורמט הודעת וואטסאפ
+#                     if line.startswith("[") and "]" in line and ": " in line:
+#                         date_part, message_part = line.split("] ", 1)
+#                         date_str = date_part.strip("[]").split(",")[0]
+
+#                         # המרת התאריך לפורמט datetime
+#                         try:
+#                             current_date = datetime.strptime(date_str, "%d.%m.%Y")
+#                         except ValueError:
+#                             print(f"Invalid date format in line: {line.strip()}") 
+#                             continue
+
+#                         # סינון לפי טווח תאריכים
+#                         if start and end:
+#                             if not (start <= current_date <= end):
+#                                 continue  # מחוץ לטווח
+
+#                         # חילוץ השם של השולח
+#                         sender = message_part.split(":")[0].strip("~").replace(" ", "").strip()
+
+#                         if sender:
+#                             nodes.add(sender)  # הוספת שולח לצמתים
+
+#                             # חישוב כמות הקשרים בין שולחים
+#                             if previous_sender and previous_sender != sender:
+#                                 edge = tuple(sorted([previous_sender, sender]))  # שמירת זוג מסודר
+#                                 edges_counter[edge] += 1
+#                             previous_sender = sender
+
+#                             count += 1  # ספירת הודעה שנכללה
+
+#                 except Exception as e:
+#                     print(f"Error processing line: {line.strip()} - {e}")
+#                     continue
+
+#         # יצירת רשימת הצמתים והקשרים עם משקלים
+#         nodes_list = [{"id": node} for node in nodes]
+#         links_list = [
+#             {"source": edge[0], "target": edge[1], "weight": weight}
+#             for edge, weight in edges_counter.items()
+#         ]
+
+#         print("Final nodes:", nodes_list)
+#         print("Final links with weights:", links_list)
+
+#         # החזרת JSON עם צמתים וקשרים
+#         return JSONResponse(content={"nodes": nodes_list, "links": links_list}, status_code=200)
+
+#     except Exception as e:
+#         print("Error:", e)
+#         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+# //////add time to the analysis
+
+def parse_datetime(date: str, time: str):
+    """Parses date & time from the request query and ensures HH:MM:SS format."""
+    if not date:
+        return None
+    if time and len(time) == 5:  # If time is in HH:MM format, add ":00"
+        time += ":00"
+    try:
+        return datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M:%S")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid time format: {time} - {e}")
+
+# @app.get("/analyze/network/{filename}")
+# async def analyze_network(
+#     filename: str,
+#     start_date: str = Query(None),
+#     start_time: str = Query(None),
+#     end_date: str = Query(None),
+#     end_time: str = Query(None),
+#     limit: int = Query(None)
+# ):
+#     try:
+#         start_datetime = parse_datetime(start_date, start_time)
+#         end_datetime = parse_datetime(end_date, end_time)
+
+#         print(f"✅ Parsed start_datetime: {start_datetime}, end_datetime: {end_datetime}")
+
+#         # ✅ Process the file with correct datetime filtering...
+        
+#         return JSONResponse(content={"message": "Network analysis completed!"}, status_code=200)
+
+#     except Exception as e:
+#         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+
+
+
 @app.get("/analyze/network/{filename}")
 async def analyze_network(
     filename: str,
     start_date: str = Query(None),
+    start_time: str = Query(None),
     end_date: str = Query(None),
-    limit: int = Query(None)  # פרמטר להגבלת מספר ההודעות
+    end_time: str = Query(None),
+    limit: int = Query(None)
 ):
     try:
-        # בדיקה אם הקובץ קיים
+        print(f"🔹 Received: start_date={start_date}, start_time={start_time}, end_date={end_date}, end_time={end_time}")
+
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         if not os.path.exists(file_path):
             return JSONResponse(content={"error": f"File '{filename}' not found."}, status_code=404)
 
-        # אובייקטים לאחסון צמתים ומונה הקשרים
         nodes = set()
-        edges_counter = defaultdict(int)  # מונה הקשרים בין שולחים
+        edges_counter = defaultdict(int)
         previous_sender = None
 
-        # המרת טווח תאריכים אם הוזנו
-        start = datetime.strptime(start_date, "%Y-%m-%d") if start_date else None
-        end = datetime.strptime(end_date, "%Y-%m-%d") if end_date else None
+        # Convert date and time to datetime format
+        start_datetime = None
+        end_datetime = None
 
-        print(f"Analyzing file: {file_path} with range {start} to {end}")
+        if start_date and start_time:
+            start_datetime = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M:%S")
+        elif start_date:
+            start_datetime = datetime.strptime(f"{start_date} 00:00:00", "%Y-%m-%d %H:%M:%S")
 
-        count = 0  # מונה הודעות
-        # קריאת הקובץ
+        if end_date and end_time:
+            end_datetime = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M:%S")
+        elif end_date:
+            end_datetime = datetime.strptime(f"{end_date} 23:59:59", "%Y-%m-%d %H:%M:%S")
+
+        print(f"🔹 Converted: start_datetime={start_datetime}, end_datetime={end_datetime}")
+
+        count = 0
         with open(file_path, "r", encoding="utf-8") as f:
             for line in f:
                 try:
-                    # עצירת הלולאה אם הגענו למגבלת הודעות
                     if limit and count >= limit:
                         break
 
-                    # דילוג על הודעות "הושמטה"
-                    if "הושמטה" in line or "הושמט" in line:
+                    if "omitted" in line or "removed" in line:
                         continue
 
-                    # בדיקה שהשורה בפורמט הודעת וואטסאפ
-                    if line.startswith("[") and "]" in line and ": " in line:
+                    if line.startswith("[") and "]" in line:
                         date_part, message_part = line.split("] ", 1)
-                        date_str = date_part.strip("[]").split(",")[0]
+                        date_time_str = date_part.strip("[]")
 
-                        # המרת התאריך לפורמט datetime
                         try:
-                            current_date = datetime.strptime(date_str, "%d.%m.%Y")
+                            # ✅ Fix: Parse the full timestamp including seconds
+                            current_datetime = datetime.strptime(date_time_str, "%d.%m.%Y, %H:%M:%S")
                         except ValueError:
-                            print(f"Invalid date format in line: {line.strip()}") 
+                            print(f" Invalid date format in line: {line.strip()}") 
                             continue
 
-                        # סינון לפי טווח תאריכים
-                        if start and end:
-                            if not (start <= current_date <= end):
-                                continue  # מחוץ לטווח
+                        print(f"✅ Parsed datetime from line: {current_datetime}")
 
-                        # חילוץ השם של השולח
+                        # Filter by date and time range
+                        if start_datetime and end_datetime and not (start_datetime <= current_datetime <= end_datetime):
+                            print(f"⏩ Skipping message at {current_datetime}, out of range")
+                            continue  
+
                         sender = message_part.split(":")[0].strip("~").replace(" ", "").strip()
 
                         if sender:
-                            nodes.add(sender)  # הוספת שולח לצמתים
+                            nodes.add(sender)
 
-                            # חישוב כמות הקשרים בין שולחים
                             if previous_sender and previous_sender != sender:
-                                edge = tuple(sorted([previous_sender, sender]))  # שמירת זוג מסודר
+                                edge = tuple(sorted([previous_sender, sender]))
                                 edges_counter[edge] += 1
                             previous_sender = sender
 
-                            count += 1  # ספירת הודעה שנכללה
+                            count += 1  
 
                 except Exception as e:
-                    print(f"Error processing line: {line.strip()} - {e}")
+                    print(f" Error processing line: {line.strip()} - {e}")
                     continue
 
-        # יצירת רשימת הצמתים והקשרים עם משקלים
         nodes_list = [{"id": node} for node in nodes]
         links_list = [
             {"source": edge[0], "target": edge[1], "weight": weight}
             for edge, weight in edges_counter.items()
         ]
 
-        print("Final nodes:", nodes_list)
-        print("Final links with weights:", links_list)
+        print(" Final nodes:", nodes_list)
+        print(" Final links with weights:", links_list)
 
-        # החזרת JSON עם צמתים וקשרים
         return JSONResponse(content={"nodes": nodes_list, "links": links_list}, status_code=200)
 
     except Exception as e:
         print("Error:", e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# /////////////////////////// network analysis ///////////////////////////
 
 # # save reaserch to mongo db
 # @app.post("/save-form")
