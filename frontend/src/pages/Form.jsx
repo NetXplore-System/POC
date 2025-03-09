@@ -28,6 +28,7 @@ const UploadWhatsAppFile = () => {
   const [endTime, setEndTime] = useState("");
   const [startTime, setStartTime] = useState("");
   const [messageLimit, setMessageLimit] = useState(50); // Default message limit
+  const [limitType, setLimitType] = useState("first"); // Default limit type is 'first'
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
@@ -75,53 +76,20 @@ const UploadWhatsAppFile = () => {
       );
   };
 
-  //בנתיים לא עובד צריך לסדר את show anlysis word
-  // const handleAnalysis = () => {
-  //   fetch(`http://localhost:8000/analyze/${uploadedFile}`)
-  //     .then((response) => response.json())
-  //     .then((data) => {
-  //       if (data.analysis) {
-  //         const labels = Object.keys(data.analysis).slice(0, 10);
-  //         const counts = Object.values(data.analysis).slice(0, 10);
-  //         setChartData({
-  //           labels,
-  //           datasets: [
-  //             {
-  //               label: "Word Frequency",
-  //               data: counts,
-  //               backgroundColor: "rgba(75,192,192,0.6)",
-  //             },
-  //           ],
-  //         });
-  //       }
-  //     })
-  //     .catch(() => setMessage("An error occurred during analysis."));
-  // };
-
-  // const formatTime = (time) => {
-  //   //  If time is in HH:MM format, add ":00" for seconds
-  //   return time && time.length === 5 ? `${time}:00` : time; 
-  // };
+  const formatTime = (time) => {
+    return time && time.length === 5 ? `${time}:00` : time;
+  };
 
   // const handleNetworkAnalysis = () => {
   //   let url = `http://localhost:8001/analyze/network/${uploadedFile}`;
 
   //   const params = new URLSearchParams();
   //   if (startDate) params.append("start_date", startDate);
-  //   if (startTime) params.append("start_time", startTime); // הוספת שעה
+  //   if (startTime) params.append("start_time", formatTime(startTime)); //
   //   if (endDate) params.append("end_date", endDate);
-  //   if (endTime) params.append("end_time", endTime); // הוספת שעה
+  //   if (endTime) params.append("end_time", formatTime(endTime)); //
   //   if (messageLimit) params.append("limit", messageLimit);
-
-  //   console.log("Requesting network analysis with:", {
-  //     startDate,
-  //     startTime,
-  //     endDate,
-  //     endTime,
-  //     messageLimit,
-  //     uploadedFile
-  //   });
-    
+  //   if (limitType) params.append("limit_type", limitType);
 
   //   url += `?${params.toString()}`;
   //   console.log("Request URL:", url);
@@ -142,20 +110,16 @@ const UploadWhatsAppFile = () => {
   //     });
   // };
 
-
-  const formatTime = (time) => {
-    return time && time.length === 5 ? `${time}:00` : time; // If "HH:MM", add ":00"
-  };
-  
   const handleNetworkAnalysis = () => {
     let url = `http://localhost:8001/analyze/network/${uploadedFile}`;
   
     const params = new URLSearchParams();
     if (startDate) params.append("start_date", startDate);
-    if (startTime) params.append("start_time", formatTime(startTime)); // ✅ Ensure HH:MM:SS
+    if (startTime) params.append("start_time", formatTime(startTime));
     if (endDate) params.append("end_date", endDate);
-    if (endTime) params.append("end_time", formatTime(endTime)); // ✅ Ensure HH:MM:SS
+    if (endTime) params.append("end_time", formatTime(endTime));
     if (messageLimit) params.append("limit", messageLimit);
+    if (limitType) params.append("limit_type", limitType); // Ensure correct type is sent!
   
     url += `?${params.toString()}`;
     console.log("Request URL:", url);
@@ -176,7 +140,6 @@ const UploadWhatsAppFile = () => {
       });
   };
   
-
 
   const handleSaveToDB = () => {
     if (!name || !description) {
@@ -304,7 +267,7 @@ const UploadWhatsAppFile = () => {
               Show Network Analysis
             </Button>
           </div>
-
+          {/* 
           <div>
             <Label>Limit Messages:</Label>
             <Input
@@ -315,7 +278,30 @@ const UploadWhatsAppFile = () => {
               value={messageLimit}
               onChange={(e) => setMessageLimit(e.target.value)}
             />
-          </div>
+          </div> */}
+
+          <FormGroup>
+            <Label>Limit Messages:</Label>
+            <Input
+              type="range"
+              min="10"
+              max="500"
+              step="10"
+              value={messageLimit}
+              onChange={(e) => setMessageLimit(e.target.value)}
+              disabled={limitType === "all"}
+            />
+            <span>{messageLimit} messages</span>
+
+            <select
+              value={limitType}
+              onChange={(e) => setLimitType(e.target.value)}
+            >
+              <option value="first">First Messages</option>
+              <option value="last">Last Messages</option>
+              <option value="all">All Messages</option>
+            </select>
+          </FormGroup>
 
           {networkData && (
             <div style={{ height: "500px", border: "1px solid lightgray" }}>
