@@ -343,54 +343,55 @@ async def analyze_network(
 
 
 
+# Regex to parse WhatsApp chat lines
 pattern = re.compile(r"\[([^\]]+)\]\s*([^:]+):\s*(.+)")
 
 @app.post("/upload-chats")
 async def upload_chats(file: UploadFile = File(...)):
     """
-    POST a text file of WhatsApp chats.
-    This endpoint reads each line, applies the regex, and inserts into MySQL.
+    Receives a text file of WhatsApp chats, determines the group name
+    from the first matched line's sender (group(2)), then inserts each
+    line's data into MySQL including that group name.
     """
     cursor = db.cursor()
-
-    # 2) Read the file contents (async read)
     contents = await file.read()
-    # Decode from bytes to string (assuming UTF-8)
     text_data = contents.decode("utf-8", errors="replace")
 
-    # 3) Process each line
     lines = text_data.splitlines()
-
     inserted_rows = 0
+
+    # We'll store the group name once we see the first matched line
+    group_name = None
 
     for line in lines:
         line = line.strip()
         match = pattern.match(line)
         if match:
-            date_time = match.group(1)  # e.g. "7.10.2023, 21:11:36"
-            sender = match.group(2)     # e.g. "~ 🦋"
-            message = match.group(3)    # e.g. "איזה יפים אתם❤️ יהיה טוב!!!!"
+            date_time = match.group(1)    # e.g. "7.10.2023, 19:43:25"
+            sender = match.group(2)       # e.g. "~🦋"
+            message = match.group(3)      # e.g. "איזה יפים אתם❤️ יהיה טוב!!!!"
 
-            # 4) Insert into the whatsapp_messages table
+            # If we haven't set group_name yet, use the first sender
+            if group_name is None:
+                group_name = sender
+
+            # Insert into the table, including group_name
             insert_sql = """
-                INSERT INTO whatsapp_messages (date_time, sender, message)
-                VALUES (%s, %s, %s)
+                INSERT INTO whatsapp_messages (group_name, date_time, sender, message)
+                VALUES (%s, %s, %s, %s)
             """
-            cursor.execute(insert_sql, (date_time, sender, message))
+            cursor.execute(insert_sql, (group_name, date_time, sender, message))
             inserted_rows += 1
 
-    # 5) Commit and close
     db.commit()
     cursor.close()
-    db.close()
+    # (Optional) do NOT close db here if you want to keep a global connection alive
 
-    # 6) Return a simple JSON response
     return {
         "status": "success",
-        "inserted_rows": inserted_rows
+        "inserted_rows": inserted_rows,
+        "group_name": group_name
     }
-
-
 # save reaserch to mongo db
 @app.post("/save-form")
 async def save_form(data: dict):
