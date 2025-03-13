@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from jose import jwt, JWTError
 import bcrypt
 import os
-
+import re
 # Load environment variables
 load_dotenv()
 
@@ -318,13 +318,13 @@ async def analyze_network(
                                 edges_counter[edge] += 1
                             previous_sender = sender
 
-                            count += 1  # ספירת הודעה שנכללה
+                            count += 1 
 
                 except Exception as e:
                     print(f"Error processing line: {line.strip()} - {e}")
                     continue
 
-        # יצירת רשימת הצמתים והקשרים עם משקלים
+   
         nodes_list = [{"id": node} for node in nodes]
         links_list = [
             {"source": edge[0], "target": edge[1], "weight": weight}
@@ -334,12 +334,62 @@ async def analyze_network(
         print("Final nodes:", nodes_list)
         print("Final links with weights:", links_list)
 
-        # החזרת JSON עם צמתים וקשרים
+
         return JSONResponse(content={"nodes": nodes_list, "links": links_list}, status_code=200)
 
     except Exception as e:
         print("Error:", e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+
+pattern = re.compile(r"\[([^\]]+)\]\s*([^:]+):\s*(.+)")
+
+@app.post("/upload-chats")
+async def upload_chats(file: UploadFile = File(...)):
+    """
+    POST a text file of WhatsApp chats.
+    This endpoint reads each line, applies the regex, and inserts into MySQL.
+    """
+    cursor = db.cursor()
+
+    # 2) Read the file contents (async read)
+    contents = await file.read()
+    # Decode from bytes to string (assuming UTF-8)
+    text_data = contents.decode("utf-8", errors="replace")
+
+    # 3) Process each line
+    lines = text_data.splitlines()
+
+    inserted_rows = 0
+
+    for line in lines:
+        line = line.strip()
+        match = pattern.match(line)
+        if match:
+            date_time = match.group(1)  # e.g. "7.10.2023, 21:11:36"
+            sender = match.group(2)     # e.g. "~ 🦋"
+            message = match.group(3)    # e.g. "איזה יפים אתם❤️ יהיה טוב!!!!"
+
+            # 4) Insert into the whatsapp_messages table
+            insert_sql = """
+                INSERT INTO whatsapp_messages (date_time, sender, message)
+                VALUES (%s, %s, %s)
+            """
+            cursor.execute(insert_sql, (date_time, sender, message))
+            inserted_rows += 1
+
+    # 5) Commit and close
+    db.commit()
+    cursor.close()
+    db.close()
+
+    # 6) Return a simple JSON response
+    return {
+        "status": "success",
+        "inserted_rows": inserted_rows
+    }
+
 
 # save reaserch to mongo db
 @app.post("/save-form")
@@ -349,7 +399,7 @@ async def save_form(data: dict):
     """
     try:
         # הגדרת הקולקציה מתוך מסד הנתונים
-        research_collection = db["Research_user"]
+        research_collection = db["research_user"]
         
         # מבנה הנתונים שיוכנס למסד
         form_data = {
