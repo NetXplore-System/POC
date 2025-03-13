@@ -8,6 +8,7 @@ import Profile from "./pages/Profile.jsx";
 import EditProfile from "./pages/EditProfile.jsx";
 import PrivateRoute from './components/PrivateRoute';
 import Header from "./components/Header.jsx";
+
 // import Menu from "./components/Menu/Menu.jsx";
 
 function App() {

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Bar } from "react-chartjs-2";
 import { ForceGraph2D } from "react-force-graph";
+import AnonymizationToggle from "../components/AnonymizationToggle.jsx";
 
 // Import custom styles
 import {
@@ -29,6 +30,7 @@ const UploadWhatsAppFile = () => {
   const [startTime, setStartTime] = useState("");
   const [messageLimit, setMessageLimit] = useState(50); // Default message limit
   const [limitType, setLimitType] = useState("first"); // Default limit type is 'first'
+  const [isAnonymized, setIsAnonymized] = useState(false);
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
@@ -112,7 +114,7 @@ const UploadWhatsAppFile = () => {
 
   const handleNetworkAnalysis = () => {
     let url = `http://localhost:8001/analyze/network/${uploadedFile}`;
-  
+
     const params = new URLSearchParams();
     if (startDate) params.append("start_date", startDate);
     if (startTime) params.append("start_time", formatTime(startTime));
@@ -120,10 +122,13 @@ const UploadWhatsAppFile = () => {
     if (endTime) params.append("end_time", formatTime(endTime));
     if (messageLimit) params.append("limit", messageLimit);
     if (limitType) params.append("limit_type", limitType); // Ensure correct type is sent!
-  
+    // if (isAnonymized) params.append("anonymize", true);
+
+    params.append("anonymize", isAnonymized ? "true" : "false"); 
+
     url += `?${params.toString()}`;
     console.log("Request URL:", url);
-  
+
     fetch(url)
       .then((response) => response.json())
       .then((data) => {
@@ -139,7 +144,6 @@ const UploadWhatsAppFile = () => {
         console.error("Error during network analysis:", err);
       });
   };
-  
 
   const handleSaveToDB = () => {
     if (!name || !description) {
@@ -217,6 +221,12 @@ const UploadWhatsAppFile = () => {
             onChange={(e) => setDescription(e.target.value)}
           />
         </FormGroup>
+        <div>
+          <AnonymizationToggle
+            isAnonymized={isAnonymized}
+            setIsAnonymized={setIsAnonymized}
+          />
+        </div>
 
         <FormGroup>
           <Label htmlFor="file">Select WhatsApp Chat File</Label>

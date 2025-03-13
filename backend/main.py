@@ -265,103 +265,6 @@ def parse_datetime(date: str, time: str):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"Invalid time format: {time} - {e}")
 
-
-# @app.get("/analyze/network/{filename}")
-# async def analyze_network(
-#     filename: str,
-#     start_date: str = Query(None),
-#     start_time: str = Query(None),
-#     end_date: str = Query(None),
-#     end_time: str = Query(None),
-#     limit: int = Query(None),
-#     limit_type: str = Query("first")  # Default: first messages
-# ):
-#     try:
-#         print(f" Received: start_date={start_date}, start_time={start_time}, end_date={end_date}, end_time={end_time}")
-
-#         file_path = os.path.join(UPLOAD_FOLDER, filename)
-#         if not os.path.exists(file_path):
-#             return JSONResponse(content={"error": f"File '{filename}' not found."}, status_code=404)
-
-#         nodes = set()
-#         edges_counter = defaultdict(int)
-#         previous_sender = None
-
-#         # Convert date and time to datetime format
-#         start_datetime = None
-#         end_datetime = None
-
-#         if start_date and start_time:
-#             start_datetime = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M:%S")
-#         elif start_date:
-#             start_datetime = datetime.strptime(f"{start_date} 00:00:00", "%Y-%m-%d %H:%M:%S")
-
-#         if end_date and end_time:
-#             end_datetime = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M:%S")
-#         elif end_date:
-#             end_datetime = datetime.strptime(f"{end_date} 23:59:59", "%Y-%m-%d %H:%M:%S")
-
-#         print(f" Converted: start_datetime={start_datetime}, end_datetime={end_datetime}")
-
-#         count = 0
-#         with open(file_path, "r", encoding="utf-8") as f:
-#             for line in f:
-#                 try:
-#                     if limit and count >= limit:
-#                         break
-
-#                     if "omitted" in line or "removed" in line:
-#                         continue
-
-#                     if line.startswith("[") and "]" in line:
-#                         date_part, message_part = line.split("] ", 1)
-#                         date_time_str = date_part.strip("[]")
-
-#                         try:
-#                             #  Fix: Parse the full timestamp including seconds
-#                             current_datetime = datetime.strptime(date_time_str, "%d.%m.%Y, %H:%M:%S")
-#                         except ValueError:
-#                             print(f" Invalid date format in line: {line.strip()}") 
-#                             continue
-
-#                         print(f" Parsed datetime from line: {current_datetime}")
-
-#                         # Filter by date and time range
-#                         if start_datetime and end_datetime and not (start_datetime <= current_datetime <= end_datetime):
-#                             print(f" Skipping message at {current_datetime}, out of range")
-#                             continue  
-
-#                         sender = message_part.split(":")[0].strip("~").replace(" ", "").strip()
-
-#                         if sender:
-#                             nodes.add(sender)
-
-#                             if previous_sender and previous_sender != sender:
-#                                 edge = tuple(sorted([previous_sender, sender]))
-#                                 edges_counter[edge] += 1
-#                             previous_sender = sender
-
-#                             count += 1  
-
-#                 except Exception as e:
-#                     print(f" Error processing line: {line.strip()} - {e}")
-#                     continue
-
-#         nodes_list = [{"id": node} for node in nodes]
-#         links_list = [
-#             {"source": edge[0], "target": edge[1], "weight": weight}
-#             for edge, weight in edges_counter.items()
-#         ]
-
-#         print(" Final nodes:", nodes_list)
-#         print(" Final links with weights:", links_list)
-
-#         return JSONResponse(content={"nodes": nodes_list, "links": links_list}, status_code=200)
-
-#     except Exception as e:
-#         print("Error:", e)
-#         return JSONResponse(content={"error": str(e)}, status_code=500)
-
 @app.get("/analyze/network/{filename}")
 async def analyze_network(
     filename: str,
@@ -370,10 +273,11 @@ async def analyze_network(
     end_date: str = Query(None),
     end_time: str = Query(None),
     limit: int = Query(None),
-    limit_type: str = Query("first")  # ברירת מחדל - הודעות ראשונות
+    limit_type: str = Query("first"),
+    anonymize: bool = Query(False)
 ):
     try:
-        print(f"🔹 Received: start_date={start_date}, start_time={start_time}, end_date={end_date}, end_time={end_time}, limit_type={limit_type}")
+        print(f" Anonymization Status: {anonymize}")
 
         file_path = os.path.join(UPLOAD_FOLDER, filename)
         if not os.path.exists(file_path):
@@ -383,6 +287,18 @@ async def analyze_network(
         edges_counter = defaultdict(int)
         previous_sender = None
 
+        #  מילון למיפוי שמות אנונימיים
+        anonymized_map = {}
+
+        def anonymize_name(name):
+            """ ממיר שם או מספר טלפון למזהה אנונימי ייחודי """
+            if name.startswith("\u202a+972") or name.startswith("+972"):
+                name = f"Phone_{len(anonymized_map) + 1}"
+            if name not in anonymized_map:
+                anonymized_map[name] = f"User_{len(anonymized_map) + 1}"
+            return anonymized_map[name]
+
+        # עיבוד תאריכים
         start_datetime = None
         end_datetime = None
 
@@ -402,7 +318,7 @@ async def analyze_network(
         with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
-        # סינון לפי תאריכים תחילה
+        # סינון לפי תאריכים
         filtered_lines = []
         for line in lines:
             if line.startswith("[") and "]" in line:
@@ -417,13 +333,13 @@ async def analyze_network(
 
         print(f"🔹 Found {len(filtered_lines)} messages in the date range.")
 
-        # יישום מגבלת limit רק אחרי הסינון!
+        # יישום מגבלת limit אחרי הסינון!
         if limit and limit_type == "first":
-            selected_lines = filtered_lines[:limit]  # הודעות ראשונות בטווח
+            selected_lines = filtered_lines[:limit]
         elif limit and limit_type == "last":
-            selected_lines = filtered_lines[-limit:]  # הודעות אחרונות בטווח
+            selected_lines = filtered_lines[-limit:]
         else:
-            selected_lines = filtered_lines  # כל ההודעות בטווח
+            selected_lines = filtered_lines
 
         print(f"🔹 Processing {len(selected_lines)} messages (Limit Type: {limit_type})")
 
@@ -434,16 +350,22 @@ async def analyze_network(
                     continue
 
                 if line.startswith("[") and "]" in line:
-                    date_part, message_part = line.split("] ", 1)
+                    _, message_part = line.split("] ", 1)
                     sender = message_part.split(":")[0].strip("~").replace(" ", "").strip()
 
                     if sender:
-                        nodes.add(sender)
+                        if anonymize:
+                            sender = anonymize_name(sender)  #  המרת השולח לפני ההוספה לרשת
+
+                        nodes.add(sender)  #  שמירה רק אחרי אנונימיזציה
 
                         if previous_sender and previous_sender != sender:
-                            edge = tuple(sorted([previous_sender, sender]))
+                            if anonymize:
+                                previous_sender = anonymize_name(previous_sender)  #  וידוא שהקודם גם באנונימיזציה
+
+                            edge = (previous_sender, sender)  #  שמירת קשר נכון
                             edges_counter[edge] += 1
-                        previous_sender = sender
+                        previous_sender = sender  #  עדכון previous_sender עם השם החדש
 
                         count += 1  
 
@@ -451,20 +373,132 @@ async def analyze_network(
                 print(f" Error processing line: {line.strip()} - {e}")
                 continue
 
-        nodes_list = [{"id": node} for node in nodes]
+        # ✅ המרת שמות ברשימת הצמתים לרשימה סופית
+        nodes_list = [{"id": anonymize_name(node) if anonymize else node} for node in nodes]
+
+        # ✅ ווידוא שהקשרים מתאימים לשמות החדשים
         links_list = [
-            {"source": edge[0], "target": edge[1], "weight": weight}
+            {
+                "source": anonymized_map.get(edge[0], edge[0]) if anonymize else edge[0], 
+                "target": anonymized_map.get(edge[1], edge[1]) if anonymize else edge[1],
+                "weight": weight
+            }
             for edge, weight in edges_counter.items()
         ]
 
-        print(" Final nodes:", nodes_list)
-        print(" Final links with weights:", links_list)
+        print(f" Anonymized Nodes: {nodes_list}")
+        print(f" Anonymized Links: {links_list}")
 
         return JSONResponse(content={"nodes": nodes_list, "links": links_list}, status_code=200)
 
     except Exception as e:
-        print("Error:", e)
+        print(" Error:", e)
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
+
+# @app.get("/analyze/network/{filename}")
+# async def analyze_network(
+#     filename: str,
+#     start_date: str = Query(None),
+#     start_time: str = Query(None),
+#     end_date: str = Query(None),
+#     end_time: str = Query(None),
+#     limit: int = Query(None),
+#     limit_type: str = Query("first"),  # ברירת מחדל - הודעות ראשונות
+# ):
+#     try:
+#         print(f"🔹 Received: start_date={start_date}, start_time={start_time}, end_date={end_date}, end_time={end_time}, limit_type={limit_type}")
+
+#         file_path = os.path.join(UPLOAD_FOLDER, filename)
+#         if not os.path.exists(file_path):
+#             return JSONResponse(content={"error": f"File '{filename}' not found."}, status_code=404)
+
+#         nodes = set()
+#         edges_counter = defaultdict(int)
+#         previous_sender = None
+
+#         start_datetime = None
+#         end_datetime = None
+
+#         if start_date and start_time:
+#             start_datetime = datetime.strptime(f"{start_date} {start_time}", "%Y-%m-%d %H:%M:%S")
+#         elif start_date:
+#             start_datetime = datetime.strptime(f"{start_date} 00:00:00", "%Y-%m-%d %H:%M:%S")
+
+#         if end_date and end_time:
+#             end_datetime = datetime.strptime(f"{end_date} {end_time}", "%Y-%m-%d %H:%M:%S")
+#         elif end_date:
+#             end_datetime = datetime.strptime(f"{end_date} 23:59:59", "%Y-%m-%d %H:%M:%S")
+
+#         print(f"🔹 Converted: start_datetime={start_datetime}, end_datetime={end_datetime}")
+
+#         # קריאת כל הקובץ
+#         with open(file_path, "r", encoding="utf-8") as f:
+#             lines = f.readlines()
+
+#         # סינון לפי תאריכים תחילה
+#         filtered_lines = []
+#         for line in lines:
+#             if line.startswith("[") and "]" in line:
+#                 date_part = line.split("] ")[0].strip("[]")
+#                 try:
+#                     current_datetime = datetime.strptime(date_part, "%d.%m.%Y, %H:%M:%S")
+#                 except ValueError:
+#                     continue  # דילוג על שורות לא תקינות
+
+#                 if start_datetime and end_datetime and start_datetime <= current_datetime <= end_datetime:
+#                     filtered_lines.append(line)
+
+#         print(f"🔹 Found {len(filtered_lines)} messages in the date range.")
+
+#         # יישום מגבלת limit רק אחרי הסינון!
+#         if limit and limit_type == "first":
+#             selected_lines = filtered_lines[:limit]  # הודעות ראשונות בטווח
+#         elif limit and limit_type == "last":
+#             selected_lines = filtered_lines[-limit:]  # הודעות אחרונות בטווח
+#         else:
+#             selected_lines = filtered_lines  # כל ההודעות בטווח
+
+#         print(f"🔹 Processing {len(selected_lines)} messages (Limit Type: {limit_type})")
+
+#         count = 0
+#         for line in selected_lines:
+#             try:
+#                 if "omitted" in line or "removed" in line:
+#                     continue
+
+#                 if line.startswith("[") and "]" in line:
+#                     date_part, message_part = line.split("] ", 1)
+#                     sender = message_part.split(":")[0].strip("~").replace(" ", "").strip()
+
+#                     if sender:
+#                         nodes.add(sender)
+
+#                         if previous_sender and previous_sender != sender:                    
+#                             edge = tuple(sorted([previous_sender, sender]))
+#                             edges_counter[edge] += 1
+#                         previous_sender = sender
+
+#                         count += 1  
+
+#             except Exception as e:
+#                 print(f" Error processing line: {line.strip()} - {e}")
+#                 continue
+
+#         nodes_list = [{"id": node} for node in nodes]
+#         links_list = [
+#             {"source": edge[0], "target": edge[1], "weight": weight}
+#             for edge, weight in edges_counter.items()
+#         ]
+
+#         print(" Final nodes:", nodes_list)
+#         print(" Final links with weights:", links_list)
+
+#         return JSONResponse(content={"nodes": nodes_list, "links": links_list}, status_code=200)
+
+#     except Exception as e:
+#         print("Error:", e)
+#         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 
 @app.post("/save-form")
