@@ -370,11 +370,12 @@ async def upload_chats(file: UploadFile = File(...)):
             date_time = match.group(1)    # e.g. "7.10.2023, 19:43:25"
             sender = match.group(2)       # e.g. "~🦋"
             message = match.group(3)      # e.g. "איזה יפים אתם❤️ יהיה טוב!!!!"
-
             # If we haven't set group_name yet, use the first sender
             if group_name is None:
                 group_name = sender
-
+                continue
+            elif sender == group_name:
+                continue
             # Insert into the table, including group_name
             insert_sql = """
                 INSERT INTO whatsapp_messages (group_name, date_time, sender, message)
