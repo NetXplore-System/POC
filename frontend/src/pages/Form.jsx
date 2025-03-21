@@ -123,6 +123,39 @@ const UploadWhatsAppFile = () => {
       });
   };
 
+  const handleSaveToDB = () => {
+    if (!name || !description) {
+      setMessage("Please fill in all required fields.");
+      return;
+    }
+  
+    const formData = {
+      name,
+      description,
+      start_date: startDate,
+    end_date: endDate,
+    message_limit: messageLimit,
+    };
+  
+    fetch("http://localhost:8001/save-form", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.message) {
+          setMessage(data.message);
+        }
+      })
+      .catch(() => setMessage("An error occurred while saving the form."));
+  };
+  
+
+
+
   const filteredNodes = networkData
     ? networkData.nodes.filter((node) =>
         node.id.toLowerCase().includes(filter.toLowerCase())
@@ -180,6 +213,9 @@ const UploadWhatsAppFile = () => {
           />
         </FormGroup>
         <Button type="submit">Upload</Button>
+
+        <Button onClick={handleSaveToDB}>Save to Database</Button>
+
       </StyledForm>
 
       {uploadedFile && (
@@ -299,6 +335,7 @@ const UploadWhatsAppFile = () => {
         </div>
       )}
     </FormContainer>
+    
   );
 };
 

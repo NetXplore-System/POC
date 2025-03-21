@@ -8,7 +8,7 @@ import Profile from "./pages/Profile.jsx";
 import EditProfile from "./pages/EditProfile.jsx";
 import PrivateRoute from './components/PrivateRoute';
 import Header from "./components/Header.jsx";
-import Menu from "./components/Menu/Menu.jsx";
+// import Menu from "./components/Menu/Menu.jsx";
 
 function App() {
   const [count, setCount] = useState(0);
@@ -16,7 +16,7 @@ function App() {
   return (
     <>
       <BrowserRouter>
-        <Menu />
+        {/* <Menu /> */}
         {/* {user && <Header />}*/}
         <Routes>
           <Route path="/" element={<Home />} />

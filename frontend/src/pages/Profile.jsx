@@ -4,6 +4,8 @@ import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUser, deleteUser } from "../redux/user/userSlice";
+import Menu from "../components/Menu/Menu.jsx"; // Adjust the path if needed
+
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -60,6 +62,8 @@ const Profile = () => {
   const avatarUrl = currentUser.avatar || "";
 
   return (
+    <>
+      <Menu />
     <Container className="text-center mt-5">
       <div className="mb-4">
         <img
@@ -83,6 +87,7 @@ const Profile = () => {
         </Button>
       </div>
     </Container>
+    </>
   );
 };
 
